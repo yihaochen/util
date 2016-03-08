@@ -77,6 +77,11 @@ def cpu_usage_bar(lines):
     bars, empty_bars = get_bars(perc)
     return '[%s%s] CPU:%5s%%' %  (bars, empty_bars, perc)
 
+def mem_usage(lines):
+    total = lines[3].split()[1]
+    used = lines[3].split()[3]
+    return 'MEM: %6s / %6s' % (used, total)
+
 def get_n_tasks(lines):
     # 'top' is always running, but we don't count it
     n_tasks = int(lines[1].split()[3]) - 1
@@ -127,7 +132,8 @@ def ctop(nodes):
             print '%s: (%i)%s' % (nodes[i], rtn, p.stderr.read().strip() )
             continue
         lines = cut_last(p.stdout.readlines())
-        print '%s: %s %s %s' % (nodes[i], cpu_usage_bar(lines), get_n_tasks(lines), get_tasks_names(lines))
+        print '%s: %s %s %s %s' % (nodes[i], cpu_usage_bar(lines), mem_usage(lines),
+                                get_n_tasks(lines), get_tasks_names(lines))
         if len(nodes) == 1:
             print trim_top(lines, nproc)
 
