@@ -18,7 +18,7 @@ cluster['heinzs']   = ['node%02i'%n for n in range(49,73)]
 cluster['all']      = ['node%02i'%n for n in range( 1,73)] 
 
 # Command to be executed. Run top for 2 iterations to get the reliable cpu usage.
-command = "ssh %s 'top -b -d 0.1 -n 2 || true'"
+command = "ssh %s -o ConnectTimeout=1 'top -b -d 0.1 -n 2 || true'"
 
 # Number of header lines in top output
 nhead = 5
