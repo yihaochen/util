@@ -21,7 +21,7 @@ rank = comm.rank        # rank of this process
 status = MPI.Status()   # get MPI status object
 name=MPI.Get_processor_name()
 
-def taskpull(worker_fn, tasks, initialize=None, callback=None):
+def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=False):
     """
     worker_fn: callable function that take arguments from items in tasks
 
@@ -63,8 +63,10 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None):
             elif tag == tags.DONE:
                 name, task, workedtime, result = data
                 results[task] = result
+                if print_result: pr = result
+                else: pr = task
                 sys.stdout.write("Worker %03d on %s returned data in %6.1f s: %s\n" %
-                        (source, name, workedtime, task))
+                        (source, name, workedtime, pr))
             elif tag == tags.EXIT:
                 sys.stdout.write("Worker %03d on %s exited. (%3d/%3d)\n" %
                         (source, name, num_workers-closed_workers-1, num_workers))
@@ -74,6 +76,7 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None):
         t2 = time.time()
         sys.stdout.write('Total time: %.2f s\n--\ninitialization: %.2f s\nparallel execution: %.2f\n'\
                %  (t2-t0, t1-t0, t2-t1))
+        if callback: callback()
         return results
 
     else:
