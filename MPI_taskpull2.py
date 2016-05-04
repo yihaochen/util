@@ -61,15 +61,16 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=Fals
                 #else:
                 #    comm.send(None, dest=source, tag=tags.EXIT)
             elif tag == tags.DONE:
-                name, task, workedtime, result = data
+                wname, task, workedtime, result = data
                 results[task] = result
                 if print_result: pr = result
                 else: pr = task
                 sys.stdout.write("Worker %03d on %s returned data in %6.1f s: %s\n" %
-                        (source, name, workedtime, pr))
+                        (source, wname, workedtime, pr))
             elif tag == tags.EXIT:
+                wname = data
                 sys.stdout.write("Worker %03d on %s exited. (%3d/%3d)\n" %
-                        (source, name, num_workers-closed_workers-1, num_workers))
+                        (source, wname, num_workers-closed_workers-1, num_workers))
                 closed_workers += 1
 
         sys.stdout.write("Master finishing\n")
@@ -81,15 +82,15 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=Fals
 
     else:
         # Worker processes execute code below
-        name = MPI.Get_processor_name()
-        #sys.stdout.write("I am a worker with rank %03d on %s.\n" % (rank, name))
+        wname = MPI.Get_processor_name()
+        #sys.stdout.write("I am a worker with rank %03d on %s.\n" % (rank, wname))
         while True:
             comm.send(None, dest=0, tag=tags.READY)
             task = comm.recv(source=0, tag=MPI.ANY_TAG, status=status)
             tag = status.Get_tag()
 
             if tag == tags.START:
-                #sys.stdout.write("Worker %03d on %s got a job: %s\n" % (rank, name, task))
+                #sys.stdout.write("Worker %03d on %s got a job: %s\n" % (rank, wname, task))
                 tw0 = time.time()
                 # Do the work here
                 if isinstance(task, tuple):
@@ -97,9 +98,9 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=Fals
                 else:
                     result = worker_fn(task)
                 workedtime = time.time() - tw0
-                comm.send((name, task, workedtime, result), dest=0, tag=tags.DONE)
+                comm.send((wname, task, workedtime, result), dest=0, tag=tags.DONE)
             elif tag == tags.EXIT:
                 break
 
-        comm.send(None, dest=0, tag=tags.EXIT)
+        comm.send(wname, dest=0, tag=tags.EXIT)
         return None
