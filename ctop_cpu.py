@@ -51,7 +51,7 @@ def read_host(argv):
             with open(argv) as f:
                 nodes = []
                 for l in f.readlines():
-                    nodes.append(l.strip('\n'))
+                    nodes.append(l[:6])
             nodes = remove_dup(nodes)
             return nodes
         except IOError:
