@@ -3,6 +3,7 @@ import numpy as np
 def curl(vin):
     '''
     Return curl of vin. The calculation is done in Fourier space.
+    vin must be of shape (3,nx,ny,nz).
     '''
     nd, nx, ny, nz = vin.shape
     l, m, n = np.mgrid[0:nx,0:ny,0:nz]
@@ -27,6 +28,7 @@ def curl(vin):
 def solenoidal(vin):
     '''
     Perform Helmholtz decomposition on vin. Return solenoidal component. Needs numpy.fft.
+    vin must be of shape (3,nx,ny,nz).
 
     vin = vr + vd = (curl A) + div \phi
 
