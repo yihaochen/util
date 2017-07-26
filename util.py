@@ -69,14 +69,14 @@ def scan_files(path, regex='*', walk=False, exclude=None, printlist=False,\
     if printlist:
         if len(files) < 10:
             for f in files:
-                print files.index(f), f
+                print(files.index(f), f)
         else:
-            print 0, files[0]
-            print 1, files[1]
-            print '.\n.\n.'
-            print files.index(files[-3]), files[-3]
-            print files.index(files[-2]), files[-2]
-            print files.index(files[-1]), files[-1]
+            print(0, files[0])
+            print(1, files[1])
+            print('.\n.\n.')
+            print(files.index(files[-3]), files[-3])
+            print(files.index(files[-2]), files[-2])
+            print(files.index(files[-1]), files[-1])
 
     return files
 
