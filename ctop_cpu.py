@@ -1,10 +1,14 @@
-#! /usr/bin/env python2.7
+#! /usr/bin/env python
 # Author: Yi-Hao Chen
 # Email: ychen@astro.wisc.edu
 # Date: 2014-04-24
 
 import sys
+import time
+import curses
 from subprocess import Popen, PIPE
+import multiprocessing
+
 
 ################################################################
 ######## Variables #############################################
@@ -34,7 +38,7 @@ nbars = 40
 def print_help():
     msg = "Usage: ctop [ cluster definition | hostfile | node name ]\n"
     msg+= "       Default cluster: %s (%s~%s)" % (default_cluster, cluster[default_cluster][0] , cluster[default_cluster][-1])
-    print msg
+    print(msg)
 
 def remove_dup(list):
     new_list = []
@@ -63,9 +67,9 @@ def read_host(argv):
 def cut_last(lines):
     init_line = 0
     for j, line in enumerate(lines):
-        if 'top - ' in line:
+        if 'top - ' in line.decode('utf8'):
             init_line = j
-    return lines[init_line:]
+    return [line.decode('utf8') for line in lines[init_line:]]
 
 def get_bars(perc):
     bars =  "|" * int((float(perc) / 100 * nbars))
@@ -107,35 +111,64 @@ def get_tasks_names(lines):
         out = ''
     else:
         out = '('
-        for user, names in tasks.iteritems():
+        for user, names in tasks.items():
             out = out + user + ':'
-            for name, n in names.iteritems():
+            for name, n in names.items():
                 s = name if n == 1 else name + '*' + str(n)
                 out = out + s + ', '
         out = out.rstrip(', ') + ')'
     return out
 
+
+class Ctop:
+
+    def __init__(self, nodes):
+        self.lock = multiprocessing.Lock()
+        self.nodes = nodes
+        self.window = curses.initscr()
+        self.window.erase()
+        self.window.refresh()
+
+    def single_node_display(self, node, y):
+        cmd = command % (node)
+        p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        rtn = p.wait()
+        # If the return code is not 0, some errors occured.
+        self.lock.acquire()
+        if rtn != 0:
+            self.window.addstr(y+1, 0, '%s: (%i)%s\n' % (node, rtn, p.stderr.read().strip() ))
+            self.window.refresh()
+            self.window.move(0,0)
+            self.window.refresh()
+        else:
+            lines = cut_last(p.stdout.readlines())
+            self.window.addstr(y+1, 0, '%s: %s %s %s %s\n' % (node, cpu_usage_bar(lines), mem_usage(lines),
+                              get_n_tasks(lines), get_tasks_names(lines)))
+            self.window.refresh()
+            self.window.move(0,0)
+            self.window.refresh()
+        self.lock.release()
+
+    def run(self):
+        jobs = []
+        for i, node in enumerate(self.nodes):
+            child = multiprocessing.Process(target=self.single_node_display, args=(node, i))
+            jobs.append(child)
+            child.start()
+        for job in jobs:
+            job.join()
+
+        if len(self.nodes) == 1:
+            cmd = command % (node)
+            p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            rtn = p.wait()
+            lines = cut_last(p.stdout.readlines())
+            self.window.addstr(2, 0, trim_top(lines, nproc))
+        self.window.refresh()
+
 ################################################################
 ######## Major Work ############################################
 
-def ctop(nodes):
-    pipes = []
-    for node in nodes:
-        cmd = command % (node)
-        pipes.append( Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE) )
-
-    for i, p in enumerate(pipes):
-        rtn = p.wait()
-        #print '\n**************** %s ****************' % nodes[i]
-        # If the return code is not 0, some errors occured.
-        if rtn != 0:
-            print '%s: (%i)%s' % (nodes[i], rtn, p.stderr.read().strip() )
-            continue
-        lines = cut_last(p.stdout.readlines())
-        print '%s: %s %s %s %s' % (nodes[i], cpu_usage_bar(lines), mem_usage(lines),
-                                get_n_tasks(lines), get_tasks_names(lines))
-        if len(nodes) == 1:
-            print trim_top(lines, nproc)
 
 def main(argv):
     if len(argv) == 1:
@@ -146,7 +179,13 @@ def main(argv):
     else:
         nodes = read_host(argv[1])
 
-    ctop(nodes)
+    ctop = Ctop(nodes)
+    try:
+        for i in range(10):
+           ctop.run()
+
+    finally:
+        curses.endwin()
 
 if __name__ == '__main__':
     main(sys.argv)
