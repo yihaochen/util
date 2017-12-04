@@ -48,8 +48,7 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=Fals
             if tag == tags.READY:
                 # Worker is ready, so send it a task
                 try:
-                    task = tasks.next()
-                    results[task] = None
+                    task = next(tasks)
                     comm.send(task, dest=source, tag=tags.START)
                     #print("Sending task to worker %03d" % (source))
                 except StopIteration:
@@ -69,7 +68,7 @@ def taskpull(worker_fn, tasks, initialize=None, callback=None, print_result=Fals
                         (source, wname, workedtime, pr))
             elif tag == tags.EXIT:
                 wname = data
-                sys.stdout.write("Worker %03d on %s exited. (%3d/%3d)\n" %
+                sys.stdout.write("Worker %03d on %s exited. (%3d/%3d are still working)\n" %
                         (source, wname, num_workers-closed_workers-1, num_workers))
                 closed_workers += 1
 
