@@ -132,30 +132,27 @@ class Ctop:
     def single_node_display(self, node, y):
         cmd = command % (node)
         p = Popen(cmd, shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        self.lock.acquire()
         rtn = p.wait()
         # If the return code is not 0, some errors occured.
-        self.lock.acquire()
         if rtn != 0:
-            self.window.addstr(y+1, 0, '%s: (%i)%s\n' % (node, rtn, p.stderr.read().strip() ))
-            self.window.refresh()
-            self.window.move(0,0)
-            self.window.refresh()
+            self.window.addstr(y+1, 0, '%s: (%i)%s\n' % (node, rtn, p.stderr.read().strip() ), curses.A_BOLD)
         else:
             lines = cut_last(p.stdout.readlines())
             self.window.addstr(y+1, 0, '%s: %s %s %s %s\n' % (node, cpu_usage_bar(lines), mem_usage(lines),
                               get_n_tasks(lines), get_tasks_names(lines)))
-            self.window.refresh()
-            self.window.move(0,0)
-            self.window.refresh()
+        self.window.refresh()
+        self.window.move(0,0)
+        self.window.refresh()
         self.lock.release()
 
     def run(self):
-        jobs = []
+        self.jobs = []
         for i, node in enumerate(self.nodes):
             child = multiprocessing.Process(target=self.single_node_display, args=(node, i))
-            jobs.append(child)
+            self.jobs.append(child)
             child.start()
-        for job in jobs:
+        for job in self.jobs:
             job.join()
 
         if len(self.nodes) == 1:
@@ -165,6 +162,11 @@ class Ctop:
             lines = cut_last(p.stdout.readlines())
             self.window.addstr(2, 0, trim_top(lines, nproc))
         self.window.refresh()
+
+    def terminate(self):
+        for job in self.jobs:
+            job.terminate()
+
 
 ################################################################
 ######## Major Work ############################################
@@ -183,6 +185,8 @@ def main(argv):
     try:
         for i in range(10):
            ctop.run()
+    except KeyboardInterrupt:
+        ctop.terminate()
 
     finally:
         curses.endwin()
