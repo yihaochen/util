@@ -3,6 +3,7 @@
 `ctop_cpu.py`
 
 A simple python tool combining ssh and top to display the cpu/ram usage of computing nodes.
+![ctop screenshot](images/ctop.png)
 
 
 ## Dynamic MPI task distribution 
