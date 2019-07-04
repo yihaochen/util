@@ -86,6 +86,11 @@ def mem_usage(lines):
     used = lines[3].split()[3]
     return 'MEM: %6s / %6s' % (used, total)
 
+def swap_usage(lines):
+    total = lines[4].split()[1]
+    used = lines[4].split()[3]
+    return 'SWAP: %6s / %6s' % (used, total)
+
 def get_n_tasks(lines):
     # 'top' is always running, but we don't count it
     n_tasks = int(lines[1].split()[3]) - 1
@@ -139,7 +144,7 @@ class Ctop:
             self.window.addstr(y+1, 0, '%s: (%i)%s\n' % (node, rtn, p.stderr.read().strip() ), curses.A_BOLD)
         else:
             lines = cut_last(p.stdout.readlines())
-            self.window.addstr(y+1, 0, '%s: %s %s %s %s\n' % (node, cpu_usage_bar(lines), mem_usage(lines),
+            self.window.addstr(y+1, 0, '%s: %s %s %s %s %s\n' % (node, cpu_usage_bar(lines), mem_usage(lines), swap_usage(lines),
                               get_n_tasks(lines), get_tasks_names(lines)))
         self.window.refresh()
         self.window.move(0,0)
